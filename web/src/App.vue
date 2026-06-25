@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import PartyMode from './components/PartyMode.vue';
 import SpeakerCard from './components/SpeakerCard.vue';
 import { useDevices } from './composables/useDevices';
+import { useGroups } from './composables/useGroups';
 
 const { data, isLoading, isError, error, refetch, isFetching } = useDevices();
+const { data: groups } = useGroups();
 
 const devices = computed(() => data.value ?? []);
 </script>
@@ -25,7 +28,9 @@ const devices = computed(() => data.value ?? []);
       Aucune enceinte trouvée. Vérifie que tu es sur le même réseau local.
     </p>
 
-    <section v-else class="grid">
+    <PartyMode v-if="!isLoading && !isError" :groups="groups ?? []" />
+
+    <section v-if="!isLoading && !isError && devices.length > 0" class="grid">
       <SpeakerCard
         v-for="d in devices"
         :key="d.uuid || d.host"

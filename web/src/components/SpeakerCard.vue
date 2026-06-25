@@ -4,8 +4,10 @@ import { useDeviceMutations } from '../composables/useDeviceMutations';
 import { useDeviceState } from '../composables/useDeviceState';
 import { useGroups } from '../composables/useGroups';
 import type { DeviceSummary } from '../types';
+import EqControls from './EqControls.vue';
 import GroupControls from './GroupControls.vue';
 import PlaylistPicker from './PlaylistPicker.vue';
+import QueueList from './QueueList.vue';
 import SeekBar from './SeekBar.vue';
 import TransportControls from './TransportControls.vue';
 import VolumeSlider from './VolumeSlider.vue';
@@ -95,6 +97,10 @@ const subtitle = computed(() => {
       />
 
       <PlaylistPicker :ip="device.host" @play="m.playPlaylist.mutate($event)" />
+
+      <QueueList :ip="device.host" />
+
+      <EqControls :ip="device.host" />
     </template>
   </article>
 </template>

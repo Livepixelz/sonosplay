@@ -45,6 +45,19 @@ export interface GroupInfo {
   members: ZoneMemberInfo[];
 }
 
+export interface QueueTrack {
+  id: string;
+  title: string;
+  artist: string | null;
+  uri: string;
+}
+
+export interface EqState {
+  bass: number;
+  treble: number;
+  loudness: boolean;
+}
+
 export interface PlaylistItem {
   id: string;
   title: string;

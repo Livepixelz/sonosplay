@@ -3,8 +3,10 @@ import type { Track } from '@svrooij/sonos/lib/models/track.js';
 import type {
   DeviceState,
   DeviceSummary,
+  EqState,
   GroupInfo,
   PlaylistItem,
+  QueueTrack,
   TrackInfo,
   TransportState,
 } from './types.js';
@@ -232,4 +234,109 @@ export async function joinGroup(host: string, coordinatorUuid: string): Promise<
 /** Sort l'enceinte de son groupe (devient autonome). */
 export async function ungroup(host: string): Promise<void> {
   await getDevice(host).AVTransportService.BecomeCoordinatorOfStandaloneGroup();
+}
+
+// --- File d'attente -------------------------------------------------------
+
+/** File d'attente courante de l'enceinte. */
+export async function getQueue(host: string): Promise<QueueTrack[]> {
+  const response = await getDevice(host).GetQueue();
+  if (!Array.isArray(response.Result)) return [];
+  return response.Result.filter(
+    (item): item is typeof item & { TrackUri: string } => Boolean(item.TrackUri),
+  ).map((item) => ({
+    id: item.ItemId ?? item.TrackUri,
+    title: item.Title ?? '(sans titre)',
+    artist: item.Artist ?? null,
+    uri: item.TrackUri,
+  }));
+}
+
+/** Lance la lecture d'une piste précise de la file (index 0-based). */
+export async function playQueueTrack(host: string, index: number): Promise<void> {
+  const device = getDevice(host);
+  await device.SeekTrack(index + 1);
+  await device.Play();
+}
+
+/** Retire une piste de la file via son ObjectID (ex. "Q:0/3"). */
+export async function removeQueueTrack(host: string, objectId: string): Promise<void> {
+  await getDevice(host).AVTransportService.RemoveTrackFromQueue({
+    InstanceID: 0,
+    ObjectID: objectId,
+    UpdateID: 0,
+  });
+}
+
+/** Déplace une piste de la file (indices 0-based). */
+export async function reorderQueueTrack(
+  host: string,
+  fromIndex: number,
+  toIndex: number,
+): Promise<void> {
+  if (fromIndex === toIndex) return;
+  // Positions Sonos en base 1 ; InsertBefore est évalué sur l'index d'origine,
+  // donc on décale de 1 quand on descend la piste.
+  const insertBefore = toIndex > fromIndex ? toIndex + 2 : toIndex + 1;
+  await getDevice(host).AVTransportService.ReorderTracksInQueue({
+    InstanceID: 0,
+    StartingIndex: fromIndex + 1,
+    NumberOfTracks: 1,
+    InsertBefore: insertBefore,
+    UpdateID: 0,
+  });
+}
+
+// --- Égaliseur ------------------------------------------------------------
+
+export async function getEq(host: string): Promise<EqState> {
+  const device = getDevice(host);
+  const [bass, treble, loudness] = await Promise.all([
+    device.RenderingControlService.GetBass({ InstanceID: 0 }),
+    device.RenderingControlService.GetTreble({ InstanceID: 0 }),
+    device.RenderingControlService.GetLoudness({ InstanceID: 0, Channel: 'Master' }),
+  ]);
+  return {
+    bass: bass.CurrentBass,
+    treble: treble.CurrentTreble,
+    loudness: loudness.CurrentLoudness,
+  };
+}
+
+export async function setEq(host: string, eq: Partial<EqState>): Promise<void> {
+  const device = getDevice(host);
+  if (eq.bass !== undefined) {
+    await device.RenderingControlService.SetBass({ InstanceID: 0, DesiredBass: eq.bass });
+  }
+  if (eq.treble !== undefined) {
+    await device.RenderingControlService.SetTreble({
+      InstanceID: 0,
+      DesiredTreble: eq.treble,
+    });
+  }
+  if (eq.loudness !== undefined) {
+    await device.RenderingControlService.SetLoudness({
+      InstanceID: 0,
+      Channel: 'Master',
+      DesiredLoudness: eq.loudness,
+    });
+  }
+}
+
+// --- Volume de groupe (mode soirée) --------------------------------------
+
+/** Volume global d'un groupe (à appeler sur le coordinateur). */
+export async function getGroupVolume(host: string): Promise<number> {
+  const response = await getDevice(host).GroupRenderingControlService.GetGroupVolume({
+    InstanceID: 0,
+  });
+  return response.CurrentVolume;
+}
+
+/** Règle le volume global d'un groupe (à appeler sur le coordinateur). */
+export async function setGroupVolume(host: string, volume: number): Promise<void> {
+  await getDevice(host).GroupRenderingControlService.SetGroupVolume({
+    InstanceID: 0,
+    DesiredVolume: volume,
+  });
 }

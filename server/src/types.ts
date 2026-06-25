@@ -61,3 +61,20 @@ export interface PlaylistItem {
   /** URI à passer à POST /play-playlist. */
   uri: string;
 }
+
+export interface QueueTrack {
+  /** ObjectID de la file (ex. "Q:0/3"), utilisé pour supprimer la piste. */
+  id: string;
+  title: string;
+  artist: string | null;
+  uri: string;
+}
+
+export interface EqState {
+  /** Graves, -10..10. */
+  bass: number;
+  /** Aigus, -10..10. */
+  treble: number;
+  /** Loudness (compensation à bas volume). */
+  loudness: boolean;
+}

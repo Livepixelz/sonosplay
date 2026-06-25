@@ -1,4 +1,11 @@
-import type { DeviceState, DeviceSummary, GroupInfo, PlaylistItem } from '../types';
+import type {
+  DeviceState,
+  DeviceSummary,
+  EqState,
+  GroupInfo,
+  PlaylistItem,
+  QueueTrack,
+} from '../types';
 
 const BASE = '/api/devices';
 
@@ -59,6 +66,46 @@ export const sonosApi = {
 
   ungroup: (ip: string) =>
     request<{ ok: true }>(`${BASE}/${ip}/ungroup`, { method: 'POST' }),
+
+  // File d'attente
+  queue: (ip: string) => request<QueueTrack[]>(`${BASE}/${ip}/queue`),
+
+  playQueueTrack: (ip: string, index: number) =>
+    request<{ ok: true }>(`${BASE}/${ip}/queue/play`, {
+      method: 'POST',
+      body: JSON.stringify({ index }),
+    }),
+
+  removeQueueTrack: (ip: string, objectId: string) =>
+    request<{ ok: true }>(`${BASE}/${ip}/queue/remove`, {
+      method: 'POST',
+      body: JSON.stringify({ objectId }),
+    }),
+
+  reorderQueueTrack: (ip: string, fromIndex: number, toIndex: number) =>
+    request<{ ok: true }>(`${BASE}/${ip}/queue/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ fromIndex, toIndex }),
+    }),
+
+  // Égaliseur
+  eq: (ip: string) => request<EqState>(`${BASE}/${ip}/eq`),
+
+  setEq: (ip: string, patch: Partial<EqState>) =>
+    request<{ ok: true }>(`${BASE}/${ip}/eq`, {
+      method: 'POST',
+      body: JSON.stringify(patch),
+    }),
+
+  // Volume de groupe (mode soirée)
+  groupVolume: (ip: string) =>
+    request<{ volume: number }>(`${BASE}/${ip}/group-volume`),
+
+  setGroupVolume: (ip: string, volume: number) =>
+    request<{ ok: true }>(`${BASE}/${ip}/group-volume`, {
+      method: 'POST',
+      body: JSON.stringify({ volume }),
+    }),
 
   playlists: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/playlists`),
   favorites: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/favorites`),

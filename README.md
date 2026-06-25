@@ -72,6 +72,14 @@ Variables d'environnement optionnelles :
 | GET     | `/api/groups`                    | Topologie des groupes multiroom du household           |
 | POST    | `/api/devices/:ip/join`          | body `{ coordinatorUuid: string }` (rejoindre un groupe) |
 | POST    | `/api/devices/:ip/ungroup`       | Sortir du groupe (devenir autonome)                    |
+| GET     | `/api/devices/:ip/queue`         | File d'attente courante                                |
+| POST    | `/api/devices/:ip/queue/play`    | body `{ index: number }` (lire la piste n° index)      |
+| POST    | `/api/devices/:ip/queue/remove`  | body `{ objectId: string }`                            |
+| POST    | `/api/devices/:ip/queue/reorder` | body `{ fromIndex: number, toIndex: number }`          |
+| GET     | `/api/devices/:ip/eq`            | `{ bass, treble, loudness }`                            |
+| POST    | `/api/devices/:ip/eq`           | body `{ bass?: -10..10, treble?: -10..10, loudness?: boolean }` |
+| GET     | `/api/devices/:ip/group-volume`  | `{ volume }` (volume global du groupe)                 |
+| POST    | `/api/devices/:ip/group-volume`  | body `{ volume: 0..100 }` (à appeler sur le coordinateur) |
 
 L'IP est validée par une regex IPv4 avant chaque appel ciblant une enceinte.
 
@@ -86,6 +94,11 @@ L'IP est validée par une regex IPv4 avant chaque appel ciblant une enceinte.
 - **Playlists & favoris** : lister les **playlists Sonos** sauvegardées et les
   **favoris**, puis soit **Jouer** (remplace la file et lance la lecture), soit
   **+ File** (ajoute à la file sans interrompre la lecture).
+- **File d'attente** : voir la queue, **réordonner par glisser-déposer**,
+  cliquer une piste pour la lire, ou la retirer.
+- **Égaliseur** : graves / aigus (−10..+10, sliders debounced) et **loudness**.
+- **Mode soirée** : pour chaque groupe multiroom, un **slider unique** qui pilote
+  le volume de toutes les enceintes du groupe d'un coup (volume de groupe Sonos).
 
 ### Détails playlists
 
