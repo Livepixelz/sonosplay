@@ -271,6 +271,7 @@ export async function playPlaylist(
   await device.AVTransportService.RemoveAllTracksFromQueue();
   await enqueue(device, uri, metadata);
   const uuid = device.Uuid || (await device.LoadUuid());
+  if (!uuid) throw new Error('Impossible de récupérer l\'UUID de l\'enceinte');
   await device.SetAVTransportURI(`x-rincon-queue:${uuid}#0`);
   await device.Play();
 }
