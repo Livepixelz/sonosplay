@@ -183,13 +183,14 @@ async function browseItems(host: string, objectId: string): Promise<PlaylistItem
   if (!raw) return [];
   return (Array.isArray(raw) ? raw : [raw])
     .map((item) => {
-      // DecodeXml ne touche qu'aux entités XML (&amp;…), pas au %xx des URI de service.
+      // URI: décodée (entités XML only) ; la lib la ré-encode via EncodeTrackUri.
+      // resMD: laissé échappé tel quel — la lib l'insère brut dans le SOAP.
       const uri = XmlHelper.DecodeXml(resUri(item.res)) ?? '';
       return {
         id: item._id ?? uri,
         title: XmlHelper.DecodeXml(item['dc:title']) ?? '(sans titre)',
         uri,
-        metadata: item['r:resMD'] ? (XmlHelper.DecodeXml(item['r:resMD']) ?? '') : '',
+        metadata: typeof item['r:resMD'] === 'string' ? item['r:resMD'] : '',
       };
     })
     .filter((item) => item.uri.length > 0);
