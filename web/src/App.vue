@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import DebugPanel from './components/DebugPanel.vue';
 import PartyMode from './components/PartyMode.vue';
 import SpeakerCard from './components/SpeakerCard.vue';
 import Toaster from './components/Toaster.vue';
@@ -10,6 +11,7 @@ const { data, isLoading, isError, error, refetch, isFetching } = useDevices();
 const { data: groups } = useGroups();
 
 const devices = computed(() => data.value ?? []);
+const showDebug = ref(false);
 </script>
 
 <template>
@@ -20,7 +22,12 @@ const devices = computed(() => data.value ?? []);
       <button class="app__refresh" :disabled="isFetching" @click="refetch()">
         {{ isFetching ? '…' : '⟳' }} Rafraîchir
       </button>
+      <button class="app__refresh" @click="showDebug = !showDebug">
+        {{ showDebug ? '× Debug' : '🐞 Debug' }}
+      </button>
     </header>
+
+    <DebugPanel v-if="showDebug && devices.length > 0" :devices="devices" />
 
     <p v-if="isLoading" class="app__msg">Découverte des enceintes…</p>
     <p v-else-if="isError" class="app__msg app__msg--error">
