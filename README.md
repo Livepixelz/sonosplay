@@ -65,17 +65,39 @@ Variables d'environnement optionnelles :
 | POST    | `/api/devices/:ip/previous`      | Piste précédente                                       |
 | POST    | `/api/devices/:ip/volume`        | body `{ volume: 0..100 }`                              |
 | POST    | `/api/devices/:ip/mute`          | body `{ mute: boolean }`                               |
+| POST    | `/api/devices/:ip/seek`          | body `{ position: number }` (secondes)                 |
 | GET     | `/api/devices/:ip/playlists`     | Playlists Sonos sauvegardées (`SQ:`)                   |
 | GET     | `/api/devices/:ip/favorites`     | Favoris Sonos (`FV:2`)                                 |
 | POST    | `/api/devices/:ip/play-playlist` | body `{ uri: string, replaceQueue?: boolean }`         |
+| GET     | `/api/groups`                    | Topologie des groupes multiroom du household           |
+| POST    | `/api/devices/:ip/join`          | body `{ coordinatorUuid: string }` (rejoindre un groupe) |
+| POST    | `/api/devices/:ip/ungroup`       | Sortir du groupe (devenir autonome)                    |
 
 L'IP est validée par une regex IPv4 avant chaque appel ciblant une enceinte.
 
-## Playlists & favoris
+## Fonctionnalités
 
-L'app liste les **playlists Sonos** sauvegardées et les **favoris**, et permet
-de les lancer (par défaut, en remplaçant la file d'attente). En interne :
-`AddUriToQueue(uri)` → `SetAVTransportURI(x-rincon-queue:<uuid>#0)` → `Play()`.
+- **Transport** : lecture / pause / piste suivante / précédente.
+- **Barre de progression** avec *seek* (clic/glisser pour se déplacer dans la
+  piste). La barre avance localement chaque seconde entre deux rafraîchissements.
+- **Volume** (slider debounced ~200 ms) et **mute**.
+- **Groupes multiroom** : regrouper plusieurs enceintes (« Jouer avec… ») ou les
+  dégrouper, comme dans l'app Sonos. La topologie est rafraîchie toutes les 5 s.
+- **Playlists & favoris** : lister les **playlists Sonos** sauvegardées et les
+  **favoris**, puis soit **Jouer** (remplace la file et lance la lecture), soit
+  **+ File** (ajoute à la file sans interrompre la lecture).
+
+### Détails playlists
+
+- *Jouer* : `RemoveAllTracksFromQueue` → `AddUriToQueue(uri)` →
+  `SetAVTransportURI(x-rincon-queue:<uuid>#0)` → `Play()`.
+- *+ File* : `AddUriToQueue(uri)` uniquement.
+
+### Détails groupes
+
+- *Grouper* : l'enceinte rejoint le coordinateur cible via
+  `SetAVTransportURI(x-rincon:<coordinatorUuid>)`.
+- *Dégrouper* : `BecomeCoordinatorOfStandaloneGroup()`.
 
 ## Trouver l'IP d'une enceinte
 

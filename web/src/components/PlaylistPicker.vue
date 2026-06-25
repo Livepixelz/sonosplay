@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'play', uri: string): void;
+  (e: 'play', payload: { uri: string; replaceQueue: boolean }): void;
 }>();
 
 const open = ref(false);
@@ -29,8 +29,8 @@ const favorites = useQuery({
 
 const loading = computed(() => playlists.isLoading.value || favorites.isLoading.value);
 
-function onPlay(): void {
-  if (selected.value) emit('play', selected.value);
+function onPlay(replaceQueue: boolean): void {
+  if (selected.value) emit('play', { uri: selected.value, replaceQueue });
 }
 </script>
 
@@ -59,9 +59,18 @@ function onPlay(): void {
         <button
           class="playlists__play"
           :disabled="!selected || disabled"
-          @click="onPlay"
+          title="Remplace la file et lance la lecture"
+          @click="onPlay(true)"
         >
           Jouer
+        </button>
+        <button
+          class="playlists__enqueue"
+          :disabled="!selected || disabled"
+          title="Ajoute à la file sans interrompre la lecture"
+          @click="onPlay(false)"
+        >
+          + File
         </button>
         <p
           v-if="!playlists.data.value?.length && !favorites.data.value?.length"

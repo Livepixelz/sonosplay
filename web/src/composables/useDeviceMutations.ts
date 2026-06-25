@@ -30,10 +30,16 @@ export function useDeviceMutations(ip: string) {
     onSuccess: invalidate,
   });
 
-  const playPlaylist = useMutation({
-    mutationFn: (uri: string) => sonosApi.playPlaylist(ip, uri),
+  const seek = useMutation({
+    mutationFn: (position: number) => sonosApi.seek(ip, position),
     onSuccess: invalidate,
   });
 
-  return { play, pause, next, previous, setVolume, setMute, playPlaylist };
+  const playPlaylist = useMutation({
+    mutationFn: ({ uri, replaceQueue }: { uri: string; replaceQueue: boolean }) =>
+      sonosApi.playPlaylist(ip, uri, replaceQueue),
+    onSuccess: invalidate,
+  });
+
+  return { play, pause, next, previous, setVolume, setMute, seek, playPlaylist };
 }

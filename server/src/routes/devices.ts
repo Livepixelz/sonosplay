@@ -92,6 +92,42 @@ devicesRouter.post(
   }),
 );
 
+devicesRouter.post(
+  '/:ip/seek',
+  handler(async (req, res) => {
+    const position = Number((req.body as { position?: unknown }).position);
+    if (!Number.isFinite(position) || position < 0) {
+      res.status(400).json({ error: 'position doit être un nombre de secondes >= 0' });
+      return;
+    }
+    await sonos.seek(ip(req), Math.round(position));
+    res.json({ ok: true });
+  }),
+);
+
+// Rejoindre le groupe d'un coordinateur (multiroom).
+devicesRouter.post(
+  '/:ip/join',
+  handler(async (req, res) => {
+    const coordinatorUuid = (req.body as { coordinatorUuid?: unknown }).coordinatorUuid;
+    if (typeof coordinatorUuid !== 'string' || coordinatorUuid.length === 0) {
+      res.status(400).json({ error: 'coordinatorUuid (string) est requis' });
+      return;
+    }
+    await sonos.joinGroup(ip(req), coordinatorUuid);
+    res.json({ ok: true });
+  }),
+);
+
+// Quitter son groupe (devenir autonome).
+devicesRouter.post(
+  '/:ip/ungroup',
+  handler(async (req, res) => {
+    await sonos.ungroup(ip(req));
+    res.json({ ok: true });
+  }),
+);
+
 // Playlists Sonos sauvegardées.
 devicesRouter.get(
   '/:ip/playlists',

@@ -26,7 +26,12 @@ const devices = computed(() => data.value ?? []);
     </p>
 
     <section v-else class="grid">
-      <SpeakerCard v-for="d in devices" :key="d.uuid || d.host" :device="d" />
+      <SpeakerCard
+        v-for="d in devices"
+        :key="d.uuid || d.host"
+        :device="d"
+        :all-devices="devices"
+      />
     </section>
   </div>
 </template>

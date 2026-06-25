@@ -1,4 +1,4 @@
-import type { DeviceState, DeviceSummary, PlaylistItem } from '../types';
+import type { DeviceState, DeviceSummary, GroupInfo, PlaylistItem } from '../types';
 
 const BASE = '/api/devices';
 
@@ -42,6 +42,23 @@ export const sonosApi = {
       method: 'POST',
       body: JSON.stringify({ mute }),
     }),
+
+  seek: (ip: string, position: number) =>
+    request<{ ok: true }>(`${BASE}/${ip}/seek`, {
+      method: 'POST',
+      body: JSON.stringify({ position }),
+    }),
+
+  groups: () => request<GroupInfo[]>('/api/groups'),
+
+  join: (ip: string, coordinatorUuid: string) =>
+    request<{ ok: true }>(`${BASE}/${ip}/join`, {
+      method: 'POST',
+      body: JSON.stringify({ coordinatorUuid }),
+    }),
+
+  ungroup: (ip: string) =>
+    request<{ ok: true }>(`${BASE}/${ip}/ungroup`, { method: 'POST' }),
 
   playlists: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/playlists`),
   favorites: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/favorites`),

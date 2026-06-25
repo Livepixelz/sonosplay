@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { devicesRouter } from './routes/devices.js';
+import { groupsRouter } from './routes/groups.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -13,6 +14,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/devices', devicesRouter);
+app.use('/api/groups', groupsRouter);
 
 // Gestion d'erreur centralisée : une enceinte injoignable renvoie 502
 // pour que le frontend la bascule en "offline".

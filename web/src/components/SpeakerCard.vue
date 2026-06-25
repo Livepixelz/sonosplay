@@ -2,14 +2,20 @@
 import { computed } from 'vue';
 import { useDeviceMutations } from '../composables/useDeviceMutations';
 import { useDeviceState } from '../composables/useDeviceState';
+import { useGroups } from '../composables/useGroups';
 import type { DeviceSummary } from '../types';
+import GroupControls from './GroupControls.vue';
 import PlaylistPicker from './PlaylistPicker.vue';
+import SeekBar from './SeekBar.vue';
 import TransportControls from './TransportControls.vue';
 import VolumeSlider from './VolumeSlider.vue';
 
 const props = defineProps<{
   device: DeviceSummary;
+  allDevices: DeviceSummary[];
 }>();
+
+const { data: groups } = useGroups();
 
 const { data, isError, isLoading } = useDeviceState(props.device.host);
 const m = useDeviceMutations(props.device.host);
@@ -51,6 +57,13 @@ const subtitle = computed(() => {
         </p>
       </div>
 
+      <SeekBar
+        :position="data?.positionSec ?? 0"
+        :duration="data?.durationSec ?? 0"
+        :playing="data?.transportState === 'PLAYING'"
+        @seek="m.seek.mutate($event)"
+      />
+
       <TransportControls
         :transport-state="data?.transportState ?? 'STOPPED'"
         @play="m.play.mutate()"
@@ -74,6 +87,12 @@ const subtitle = computed(() => {
         />
         <span class="card__vol-value">{{ data?.volume ?? 0 }}</span>
       </div>
+
+      <GroupControls
+        :device="device"
+        :all-devices="allDevices"
+        :groups="groups ?? []"
+      />
 
       <PlaylistPicker :ip="device.host" @play="m.playPlaylist.mutate($event)" />
     </template>

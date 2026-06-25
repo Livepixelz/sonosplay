@@ -35,6 +35,24 @@ export interface DeviceState {
   mute: boolean;
   transportState: TransportState;
   currentTrack: TrackInfo | null;
+  /** Position de lecture courante, en secondes (0 si inconnue). */
+  positionSec: number;
+  /** Durée de la piste, en secondes (0 si inconnue / flux continu). */
+  durationSec: number;
+}
+
+export interface ZoneMemberInfo {
+  host: string;
+  name: string;
+  uuid: string;
+}
+
+export interface GroupInfo {
+  id: string;
+  /** Nom du groupe (ex. "Salon + Cuisine"). */
+  name: string;
+  coordinator: ZoneMemberInfo;
+  members: ZoneMemberInfo[];
 }
 
 export interface PlaylistItem {

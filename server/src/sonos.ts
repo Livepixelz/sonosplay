@@ -3,6 +3,7 @@ import type { Track } from '@svrooij/sonos/lib/models/track.js';
 import type {
   DeviceState,
   DeviceSummary,
+  GroupInfo,
   PlaylistItem,
   TrackInfo,
   TransportState,
@@ -58,6 +59,21 @@ function absoluteAlbumArt(host: string, uri: string | undefined): string | null 
   return `http://${host}:${SONOS_PORT}${uri.startsWith('/') ? '' : '/'}${uri}`;
 }
 
+/** Convertit une durée Sonos "H:MM:SS" en secondes (0 si invalide). */
+function parseDuration(value: string | undefined): number {
+  if (!value || value === 'NOT_IMPLEMENTED') return 0;
+  const parts = value.split(':').map(Number);
+  if (parts.length === 0 || parts.some((p) => Number.isNaN(p))) return 0;
+  return parts.reduce((acc, p) => acc * 60 + p, 0);
+}
+
+/** Convertit des secondes en "H:MM:SS" pour Seek. */
+function formatSeconds(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+}
+
 /** Transforme un Track sonos-ts en TrackInfo, ou null si vide. */
 function toTrackInfo(host: string, meta: Track | string | undefined): TrackInfo | null {
   if (!meta || typeof meta === 'string') return null;
@@ -84,7 +100,14 @@ export async function getDeviceState(host: string): Promise<DeviceState> {
     mute: state.muted,
     transportState: state.transportState as TransportState,
     currentTrack: toTrackInfo(host, state.positionInfo.TrackMetaData),
+    positionSec: parseDuration(state.positionInfo.RelTime),
+    durationSec: parseDuration(state.positionInfo.TrackDuration),
   };
+}
+
+/** Déplace la lecture à `positionSec` secondes dans la piste courante. */
+export async function seek(host: string, positionSec: number): Promise<void> {
+  await getDevice(host).SeekPosition(formatSeconds(positionSec));
 }
 
 export async function play(host: string): Promise<void> {
@@ -157,12 +180,56 @@ export async function playPlaylist(
 ): Promise<void> {
   const device = getDevice(host);
 
-  if (replaceQueue) {
-    await device.AVTransportService.RemoveAllTracksFromQueue();
+  // Ajout simple à la file, sans toucher à la lecture en cours.
+  if (!replaceQueue) {
+    await device.AddUriToQueue(uri);
+    return;
   }
-  await device.AddUriToQueue(uri);
 
+  // Remplace la file et lance la lecture.
+  await device.AVTransportService.RemoveAllTracksFromQueue();
+  await device.AddUriToQueue(uri);
   const uuid = device.Uuid || (await device.LoadUuid());
   await device.SetAVTransportURI(`x-rincon-queue:${uuid}#0`);
   await device.Play();
+}
+
+/** Renvoie une enceinte connue (cache) ou en découvre une. */
+async function anyDevice(): Promise<SonosDevice> {
+  const cached = deviceCache.values().next().value;
+  if (cached) return cached;
+  await discoverDevices();
+  const found = deviceCache.values().next().value;
+  if (!found) throw new Error('Aucune enceinte connue pour lire la topologie');
+  return found;
+}
+
+/** Topologie des groupes (multiroom) du household. */
+export async function getGroups(): Promise<GroupInfo[]> {
+  const device = await anyDevice();
+  const zones = await device.GetZoneGroupState();
+  return zones.map((zone) => ({
+    id: zone.groupId,
+    name: zone.name,
+    coordinator: {
+      host: zone.coordinator.host,
+      name: zone.coordinator.name,
+      uuid: zone.coordinator.uuid,
+    },
+    members: zone.members.map((m) => ({ host: m.host, name: m.name, uuid: m.uuid })),
+  }));
+}
+
+/** Rattache une enceinte au groupe d'un coordinateur (par UUID). */
+export async function joinGroup(host: string, coordinatorUuid: string): Promise<void> {
+  await getDevice(host).AVTransportService.SetAVTransportURI({
+    InstanceID: 0,
+    CurrentURI: `x-rincon:${coordinatorUuid}`,
+    CurrentURIMetaData: '',
+  });
+}
+
+/** Sort l'enceinte de son groupe (devient autonome). */
+export async function ungroup(host: string): Promise<void> {
+  await getDevice(host).AVTransportService.BecomeCoordinatorOfStandaloneGroup();
 }

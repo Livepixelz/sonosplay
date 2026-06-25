@@ -28,6 +28,21 @@ export interface DeviceState {
   mute: boolean;
   transportState: TransportState;
   currentTrack: TrackInfo | null;
+  positionSec: number;
+  durationSec: number;
+}
+
+export interface ZoneMemberInfo {
+  host: string;
+  name: string;
+  uuid: string;
+}
+
+export interface GroupInfo {
+  id: string;
+  name: string;
+  coordinator: ZoneMemberInfo;
+  members: ZoneMemberInfo[];
 }
 
 export interface PlaylistItem {

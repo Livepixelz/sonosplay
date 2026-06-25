@@ -249,6 +249,122 @@ body {
   opacity: 0.4;
 }
 
+/* SeekBar */
+.seek {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.seek__time {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  width: 4ch;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.seek__slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 16px;
+  touch-action: none;
+  user-select: none;
+}
+
+.seek__track {
+  position: relative;
+  flex-grow: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.seek__range {
+  position: absolute;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.seek__thumb {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.seek__slider[data-disabled] {
+  opacity: 0.5;
+}
+
+.seek__slider[data-disabled] .seek__thumb {
+  display: none;
+}
+
+/* Group controls */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+}
+
+.group__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.group__badge {
+  font-size: 0.78rem;
+  color: #bcd0ff;
+}
+
+.group__badge--solo {
+  color: var(--muted);
+}
+
+.group__ungroup,
+.group__join-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.group__ungroup:disabled,
+.group__join-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.group__join {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.group__select {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem;
+  font-size: 0.82rem;
+}
+
 .playlists {
   border-top: 1px solid var(--border);
   padding-top: 0.6rem;
@@ -280,16 +396,27 @@ body {
   padding: 0.4rem;
 }
 
-.playlists__play {
-  background: var(--accent);
-  border: none;
-  color: #fff;
+.playlists__play,
+.playlists__enqueue {
   border-radius: 8px;
   padding: 0.4rem 0.9rem;
   cursor: pointer;
 }
 
-.playlists__play:disabled {
+.playlists__play {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+}
+
+.playlists__enqueue {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.playlists__play:disabled,
+.playlists__enqueue:disabled {
   opacity: 0.4;
   cursor: default;
 }
