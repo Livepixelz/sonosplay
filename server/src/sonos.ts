@@ -1,5 +1,9 @@
 import { SonosDevice, SonosManager } from '@svrooij/sonos';
+import XmlHelperModule from '@svrooij/sonos/lib/helpers/xml-helper.js';
 import type { Track } from '@svrooij/sonos/lib/models/track.js';
+import { parse as parseXml } from 'fast-xml-parser';
+
+const XmlHelper = XmlHelperModule.default;
 import type {
   DeviceState,
   DeviceSummary,
@@ -140,35 +144,93 @@ export async function setMute(host: string, mute: boolean): Promise<void> {
   });
 }
 
-/** Convertit une réponse Browse en liste de PlaylistItem typée. */
-function toPlaylistItems(result: Track[] | string): PlaylistItem[] {
-  if (!Array.isArray(result)) return [];
-  return result
-    .filter((item): item is Track & { TrackUri: string } => Boolean(item.TrackUri))
-    .map((item) => ({
-      id: item.ItemId ?? item.TrackUri,
-      title: item.Title ?? '(sans titre)',
-      uri: item.TrackUri,
-    }));
+interface DidlItem {
+  _id?: string;
+  'dc:title'?: string;
+  res?: string | { '#text'?: string };
+  'r:resMD'?: string;
 }
 
-/** Playlists Sonos sauvegardées (ObjectID `SQ:`). */
-export async function getPlaylists(host: string): Promise<PlaylistItem[]> {
+function resUri(res: DidlItem['res']): string {
+  return typeof res === 'string' ? res : (res?.['#text'] ?? '');
+}
+
+/**
+ * Browse brut + parsing DIDL maison : on garde le `r:resMD` (metadata réelle,
+ * avec le `<desc>` du service musical) que la lib jette en parsant en Track.
+ * `stopNodes` empêche fast-xml-parser de désérialiser le DIDL imbriqué du resMD,
+ * qu'on récupère en string puis qu'on décode une fois (il est encodé en double).
+ */
+async function browseItems(host: string, objectId: string): Promise<PlaylistItem[]> {
   const response = await getDevice(host).ContentDirectoryService.Browse({
-    ObjectID: 'SQ:',
+    ObjectID: objectId,
     BrowseFlag: 'BrowseDirectChildren',
     Filter: '*',
     StartingIndex: 0,
     RequestedCount: 100,
     SortCriteria: '',
   });
-  return toPlaylistItems(response.Result);
+  const decoded = XmlHelper.DecodeXml(response.Result);
+  if (!decoded) return [];
+  const parsed = parseXml(decoded, {
+    ignoreAttributes: false,
+    attributeNamePrefix: '_',
+    parseNodeValue: false,
+    parseAttributeValue: false,
+    stopNodes: ['r:resMD'],
+  }) as { 'DIDL-Lite'?: { item?: DidlItem | DidlItem[] } };
+  const raw = parsed['DIDL-Lite']?.item;
+  if (!raw) return [];
+  return (Array.isArray(raw) ? raw : [raw])
+    .map((item) => {
+      // DecodeXml ne touche qu'aux entités XML (&amp;…), pas au %xx des URI de service.
+      const uri = XmlHelper.DecodeXml(resUri(item.res)) ?? '';
+      return {
+        id: item._id ?? uri,
+        title: XmlHelper.DecodeXml(item['dc:title']) ?? '(sans titre)',
+        uri,
+        metadata: item['r:resMD'] ? (XmlHelper.DecodeXml(item['r:resMD']) ?? '') : '',
+      };
+    })
+    .filter((item) => item.uri.length > 0);
+}
+
+/** Playlists Sonos sauvegardées (ObjectID `SQ:`). */
+export async function getPlaylists(host: string): Promise<PlaylistItem[]> {
+  return browseItems(host, 'SQ:');
 }
 
 /** Favoris Sonos (radios, albums épinglés…). */
 export async function getFavorites(host: string): Promise<PlaylistItem[]> {
-  const response = await getDevice(host).GetFavorites();
-  return toPlaylistItems(response.Result);
+  return browseItems(host, 'FV:2');
+}
+
+// Flux continus (radios) : non enqueuables, à poser directement comme transport URI.
+const STREAM_PREFIXES = [
+  'x-sonosapi-stream:',
+  'x-sonosapi-radio:',
+  'x-sonosapi-hls:',
+  'x-rincon-mp3radio:',
+  'x-sonosprog-http:',
+];
+
+function isStreamUri(uri: string): boolean {
+  return STREAM_PREFIXES.some((prefix) => uri.startsWith(prefix));
+}
+
+/** Enfile une URI avec sa metadata ; sans metadata, on laisse la lib la deviner. */
+async function enqueue(device: SonosDevice, uri: string, metadata: string): Promise<void> {
+  if (!metadata) {
+    await device.AddUriToQueue(uri);
+    return;
+  }
+  await device.AVTransportService.AddURIToQueue({
+    InstanceID: 0,
+    EnqueuedURI: uri,
+    EnqueuedURIMetaData: metadata,
+    DesiredFirstTrackNumberEnqueued: 0,
+    EnqueueAsNext: false,
+  });
 }
 
 /**
@@ -179,18 +241,34 @@ export async function playPlaylist(
   host: string,
   uri: string,
   replaceQueue = true,
+  metadata = '',
 ): Promise<void> {
   const device = getDevice(host);
 
+  // Une radio ne s'ajoute pas à la file : on la pose comme transport et on lit.
+  if (isStreamUri(uri)) {
+    if (metadata) {
+      await device.AVTransportService.SetAVTransportURI({
+        InstanceID: 0,
+        CurrentURI: uri,
+        CurrentURIMetaData: metadata,
+      });
+    } else {
+      await device.SetAVTransportURI(uri);
+    }
+    await device.Play();
+    return;
+  }
+
   // Ajout simple à la file, sans toucher à la lecture en cours.
   if (!replaceQueue) {
-    await device.AddUriToQueue(uri);
+    await enqueue(device, uri, metadata);
     return;
   }
 
   // Remplace la file et lance la lecture.
   await device.AVTransportService.RemoveAllTracksFromQueue();
-  await device.AddUriToQueue(uri);
+  await enqueue(device, uri, metadata);
   const uuid = device.Uuid || (await device.LoadUuid());
   await device.SetAVTransportURI(`x-rincon-queue:${uuid}#0`);
   await device.Play();

@@ -62,4 +62,5 @@ export interface PlaylistItem {
   id: string;
   title: string;
   uri: string;
+  metadata: string;
 }

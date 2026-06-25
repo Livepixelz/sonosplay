@@ -60,6 +60,8 @@ export interface PlaylistItem {
   title: string;
   /** URI à passer à POST /play-playlist. */
   uri: string;
+  /** Metadata DIDL (resMD) à renvoyer telle quelle pour l'enqueue. */
+  metadata: string;
 }
 
 export interface QueueTrack {

@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'play', payload: { uri: string; replaceQueue: boolean }): void;
+  (e: 'play', payload: { uri: string; replaceQueue: boolean; metadata: string }): void;
 }>();
 
 const open = ref(false);
@@ -29,8 +29,15 @@ const favorites = useQuery({
 
 const loading = computed(() => playlists.isLoading.value || favorites.isLoading.value);
 
+const selectedItem = computed(() =>
+  [...(playlists.data.value ?? []), ...(favorites.data.value ?? [])].find(
+    (item) => item.id === selected.value,
+  ),
+);
+
 function onPlay(replaceQueue: boolean): void {
-  if (selected.value) emit('play', { uri: selected.value, replaceQueue });
+  const item = selectedItem.value;
+  if (item) emit('play', { uri: item.uri, replaceQueue, metadata: item.metadata });
 }
 </script>
 
@@ -46,12 +53,12 @@ function onPlay(replaceQueue: boolean): void {
         <select v-model="selected" class="playlists__select">
           <option value="" disabled>Choisir…</option>
           <optgroup v-if="playlists.data.value?.length" label="Playlists Sonos">
-            <option v-for="p in playlists.data.value" :key="p.id" :value="p.uri">
+            <option v-for="p in playlists.data.value" :key="p.id" :value="p.id">
               {{ p.title }}
             </option>
           </optgroup>
           <optgroup v-if="favorites.data.value?.length" label="Favoris">
-            <option v-for="f in favorites.data.value" :key="f.id" :value="f.uri">
+            <option v-for="f in favorites.data.value" :key="f.id" :value="f.id">
               {{ f.title }}
             </option>
           </optgroup>

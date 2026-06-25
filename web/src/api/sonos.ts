@@ -110,9 +110,9 @@ export const sonosApi = {
   playlists: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/playlists`),
   favorites: (ip: string) => request<PlaylistItem[]>(`${BASE}/${ip}/favorites`),
 
-  playPlaylist: (ip: string, uri: string, replaceQueue = true) =>
+  playPlaylist: (ip: string, uri: string, replaceQueue = true, metadata = '') =>
     request<{ ok: true }>(`${BASE}/${ip}/play-playlist`, {
       method: 'POST',
-      body: JSON.stringify({ uri, replaceQueue }),
+      body: JSON.stringify({ uri, replaceQueue, metadata }),
     }),
 };

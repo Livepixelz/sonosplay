@@ -264,13 +264,14 @@ devicesRouter.post(
 devicesRouter.post(
   '/:ip/play-playlist',
   handler(async (req, res) => {
-    const body = req.body as { uri?: unknown; replaceQueue?: unknown };
+    const body = req.body as { uri?: unknown; replaceQueue?: unknown; metadata?: unknown };
     if (typeof body.uri !== 'string' || body.uri.length === 0) {
       res.status(400).json({ error: 'uri (string) est requis' });
       return;
     }
     const replaceQueue = body.replaceQueue === undefined ? true : Boolean(body.replaceQueue);
-    await sonos.playPlaylist(ip(req), body.uri, replaceQueue);
+    const metadata = typeof body.metadata === 'string' ? body.metadata : '';
+    await sonos.playPlaylist(ip(req), body.uri, replaceQueue, metadata);
     res.json({ ok: true });
   }),
 );
