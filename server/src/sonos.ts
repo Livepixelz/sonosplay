@@ -235,6 +235,21 @@ async function enqueue(device: SonosDevice, uri: string, metadata: string): Prom
 }
 
 /**
+ * Sonos renvoie UPnP 701 (Transition not available) si on Play() avant que le
+ * transport soit prêt après un SetAVTransportURI (stream qui buffer, queue
+ * fraîche). On réessaie une fois après un court délai.
+ */
+async function playWithRetry(device: SonosDevice): Promise<void> {
+  try {
+    await device.Play();
+  } catch (err) {
+    if (!/\b701\b/.test((err as Error).message ?? '')) throw err;
+    await new Promise((r) => setTimeout(r, 500));
+    await device.Play();
+  }
+}
+
+/**
  * Joue une playlist / un favori.
  * Par défaut on remplace la file d'attente puis on lance la lecture.
  */
@@ -248,6 +263,13 @@ export async function playPlaylist(
 
   // Une radio ne s'ajoute pas à la file : on la pose comme transport et on lit.
   if (isStreamUri(uri)) {
+    // Stop préalable : sinon SetAVTransportURI sur transport actif déclenche
+    // souvent UPnP 701 (Transition not available) au Play() qui suit.
+    try {
+      await device.Stop();
+    } catch {
+      /* déjà arrêté */
+    }
     if (metadata) {
       await device.AVTransportService.SetAVTransportURI({
         InstanceID: 0,
@@ -257,7 +279,7 @@ export async function playPlaylist(
     } else {
       await device.SetAVTransportURI(uri);
     }
-    await device.Play();
+    await playWithRetry(device);
     return;
   }
 
@@ -273,7 +295,7 @@ export async function playPlaylist(
   const uuid = device.Uuid || (await device.LoadUuid());
   if (!uuid) throw new Error('Impossible de récupérer l\'UUID de l\'enceinte');
   await device.SetAVTransportURI(`x-rincon-queue:${uuid}#0`);
-  await device.Play();
+  await playWithRetry(device);
 }
 
 /** Renvoie une enceinte connue (cache) ou en découvre une. */
