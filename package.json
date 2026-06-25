@@ -1,0 +1,15 @@
+{
+  "name": "sonosplay",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Contrôle local d'enceintes Sonos via leur API UPnP (port 1400). Usage personnel.",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace server",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace server && npm run build --workspace web"
+  }
+}
