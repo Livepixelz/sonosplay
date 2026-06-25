@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import PartyMode from './components/PartyMode.vue';
 import SpeakerCard from './components/SpeakerCard.vue';
+import Toaster from './components/Toaster.vue';
 import { useDevices } from './composables/useDevices';
 import { useGroups } from './composables/useGroups';
 
@@ -12,6 +13,7 @@ const devices = computed(() => data.value ?? []);
 </script>
 
 <template>
+  <Toaster />
   <div class="app">
     <header class="app__header">
       <h1>SonosPlay</h1>
